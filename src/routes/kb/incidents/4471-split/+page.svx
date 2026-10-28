@@ -1,0 +1,62 @@
+---
+layout: runbook
+title: '#4471 split · three problems, not one'
+owner: support desk
+status: accepted
+reviewed: 2026-10-28
+signature: GogaDidebashvili
+---
+
+<script>
+  import ProblemTable from '#lib/kb/ProblemTable.svelte';
+  import CauseTable from '#lib/kb/CauseTable.svelte';
+  import Callout from '#lib/kb/Callout.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
+
+  const repo = 'https://github.com/GogaDidebashvili/mega-what-it-shows/issues';
+</script>
+
+[#4471](/kb/incidents/4471) merged every "wrong date" report into one ticket and marked it known,
+with one fix queued. Read by tenant instead of by subject line, the reports describe three
+different problems. One fix closes only one of them.
+
+<Callout kind="warn">
+The queued parser fix does not close #4471. The form hint and the one-day moves stay broken after it ships.
+</Callout>
+
+## The problems
+
+<ProblemTable
+  ticket={4471}
+  tickets={{ parser: `${repo}/1`, hint: `${repo}/2`, 'one-day': `${repo}/3` }}
+/>
+
+- **`parser`**: the shared parser reads every date month first. A day-first tenant's
+  date comes out with day and month swapped. This is the bug the queued fix is for.
+- **`hint`**: the `booking-v3` form prints `MM/DD/YYYY` under its date field, then reads what
+  people type day first, the tenant's way. People follow the hint and get the swap. Fixing the
+  parser does not touch it: the fix is the hint, or the form reading what the hint asks for.
+- **`one-day`**: the booking moves by one day, not by a swap. One meeting showed different
+  days in two time zones, one month was off by a day, and one invite arrived before its booking.
+  That points at time zones, not at date order. The desk had already read these as one-day
+  moves ([desk notes](/kb/incidents/4471)) but left them under `parser`.
+
+## How the reports were placed
+
+The ticket export lists some reports twice. Each report counts once, by its id. Each report goes
+to a problem by its tenant (locale and booking form, `locales.ts`), not by intake's tag. Intake
+guesses from the reporter's browser, and the browser is not where the bug is: a person on a US
+browser booking with a day-first tenant still hits that tenant's problem.
+
+The rows below are the desk's own cause table, before the split. The one-day moves sit inside
+`parser` there.
+
+<CauseTable ticket={4471} />
+
+## Lessons
+
+- Merging on the subject line ([decision 0001](/kb/decisions/0001-dedupe-by-subject)) put three
+  bugs in one ticket, because every one of them is "the date is wrong" to the person reporting it.
+- Before a big ticket is marked known, read it by where the reports come from, not by what they say.
+
+<RenderStamp {signature} />
